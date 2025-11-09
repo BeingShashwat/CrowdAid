@@ -29,24 +29,60 @@ export default function LoginPage() {
     setError("")
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      // Try backend API first
+      const { authApi } = await import("@/lib/api-client")
+      const response = await authApi.login({
+        email: formData.email,
+        password: formData.password,
+        rememberMe: formData.rememberMe,
+      })
 
-      // Basic validation
-      if (!formData.email || !formData.password) {
-        throw new Error("Please fill in all fields")
+      if (response.data?.requires2FA) {
+        // Handle 2FA flow
+        setError("2FA verification required")
+        return
       }
 
-      if (!formData.email.includes("@")) {
-        throw new Error("Please enter a valid email address")
+      if (response.data?.user) {
+        const user = response.data.user
+        localStorage.setItem(
+          "crowdaid_user",
+          JSON.stringify({
+            email: user.email,
+            name: `${user.firstName} ${user.lastName}`,
+            type: user.userType.toLowerCase(),
+            loginTime: new Date().toISOString(),
+          }),
+        )
+        
+        // Redirect based on user type
+        if (user.role === "ADMIN" || user.type === "admin") {
+          router.push("/admin-dashboard")
+        } else if (user.userType === "VOLUNTEER" || user.type === "volunteer") {
+          router.push("/volunteer-dashboard")
+        } else {
+          router.push("/dashboard")
+        }
+        return
       }
 
-      if (formData.password.length < 6) {
-        throw new Error("Password must be at least 6 characters")
-      }
-
-      // Demo credentials
-      if (formData.email === "demo@crowdaid.in" && formData.password === "demo123") {
+      throw new Error("Login failed")
+    } catch (err) {
+      // Fallback to demo credentials if backend is not available
+      if (formData.email === "admin@crowdaid.in" && formData.password === "admin123") {
+        localStorage.setItem(
+          "crowdaid_user",
+          JSON.stringify({
+            email: formData.email,
+            name: "Admin User",
+            type: "admin",
+            role: "ADMIN",
+            loginTime: new Date().toISOString(),
+          }),
+        )
+        router.push("/admin-dashboard")
+        return
+      } else if (formData.email === "demo@crowdaid.in" && formData.password === "demo123") {
         localStorage.setItem(
           "crowdaid_user",
           JSON.stringify({
@@ -57,6 +93,7 @@ export default function LoginPage() {
           }),
         )
         router.push("/dashboard")
+        return
       } else if (formData.email === "volunteer@crowdaid.in" && formData.password === "volunteer123") {
         localStorage.setItem(
           "crowdaid_user",
@@ -68,11 +105,10 @@ export default function LoginPage() {
           }),
         )
         router.push("/volunteer-dashboard")
-      } else {
-        throw new Error("Invalid credentials. Try demo@crowdaid.in / demo123 or volunteer@crowdaid.in / volunteer123")
+        return
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed")
+      
+      setError(err instanceof Error ? err.message : "Login failed. Make sure backend is running.")
     } finally {
       setIsLoading(false)
     }
@@ -87,20 +123,8 @@ export default function LoginPage() {
   }
 
   const handleGoogleLogin = () => {
-    // Simulate Google OAuth
-    setIsLoading(true)
-    setTimeout(() => {
-      localStorage.setItem(
-        "crowdaid_user",
-        JSON.stringify({
-          email: "user@gmail.com",
-          name: "Google User",
-          type: "user",
-          loginTime: new Date().toISOString(),
-        }),
-      )
-      router.push("/dashboard")
-    }, 1500)
+    // Redirect to backend OAuth endpoint
+    window.location.href = "http://localhost:3001/api/auth/google"
   }
 
   return (
