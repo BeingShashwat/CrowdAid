@@ -1,0 +1,260 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  emailVerified     Boolean   @default(false)
+  passwordHash      String?   // Nullable for OAuth users
+  firstName         String
+  lastName          String
+  phone             String?
+  phoneVerified     Boolean   @default(false)
+  role              UserRole  @default(USER)
+  userType          UserType  @default(USER)
+  avatarUrl         String?
+  isActive          Boolean   @default(true)
+  isBanned          Boolean   @default(false)
+  twoFactorEnabled  Boolean   @default(false)
+  twoFactorSecret   String?   // Encrypted TOTP secret
+  emergencyContact  Boolean   @default(false)
+  lastLoginAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  sessions          Session[]
+  accounts          Account[]  // OAuth accounts
+  emergencies       Emergency[]
+  volunteerProfiles VolunteerProfile?
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+
+  @@index([email])
+  @@index([role])
+  @@index([userType])
+  @@map("users")
+}
+
+model Account {
+  id                String   @id @default(uuid())
+  userId            String
+  provider          String   // 'google', 'github', etc.
+  providerAccountId String
+  accessToken       String?  @db.Text
+  refreshToken      String?  @db.Text
+  expiresAt         Int?
+  tokenType         String?
+  scope             String?
+  idToken           String?  @db.Text
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  sessionToken String   @unique
+  refreshToken String?  @unique
+  expiresAt    DateTime
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sessionToken])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  id         String   @id @default(uuid())
+  identifier String   // email or phone
+  token      String   @unique
+  type       String   // 'email', 'phone', 'password-reset'
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([identifier, token])
+  @@map("verification_tokens")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+  @@map("password_reset_tokens")
+}
+
+model Emergency {
+  id              String          @id @default(uuid())
+  userId          String
+  type            EmergencyType
+  status          EmergencyStatus @default(PENDING)
+  title           String
+  description     String?         @db.Text
+  location        Json?           // { lat, lng, address }
+  priority        Priority        @default(MEDIUM)
+  assignedTo      String?         // Volunteer ID
+  resolvedAt      DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  responses       EmergencyResponse[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@index([assignedTo])
+  @@map("emergencies")
+}
+
+model EmergencyResponse {
+  id          String   @id @default(uuid())
+  emergencyId String
+  volunteerId String
+  status      ResponseStatus @default(PENDING)
+  message     String?  @db.Text
+  respondedAt DateTime @default(now())
+  arrivedAt   DateTime?
+  completedAt DateTime?
+
+  emergency   Emergency @relation(fields: [emergencyId], references: [id], onDelete: Cascade)
+
+  @@index([emergencyId])
+  @@index([volunteerId])
+  @@map("emergency_responses")
+}
+
+model VolunteerProfile {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  isVerified        Boolean  @default(false)
+  verificationDoc   String?  // Document URL
+  skills            String[] // Array of skills
+  availability      Json?    // { days: [], hours: {} }
+  location          Json?    // { lat, lng, address, radius }
+  rating            Float    @default(0)
+  totalResponses    Int      @default(0)
+  successfulHelps   Int      @default(0)
+  bio               String?  @db.Text
+  certifications    String[] // Array of certification URLs
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("volunteer_profiles")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String           @db.Text
+  data      Json?            // Additional data
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  entity    String?  // 'user', 'emergency', etc.
+  entityId  String?
+  details   Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([entity, entityId])
+  @@map("audit_logs")
+}
+
+enum UserRole {
+  USER
+  VOLUNTEER
+  ADMIN
+  MODERATOR
+}
+
+enum UserType {
+  USER
+  VOLUNTEER
+}
+
+enum EmergencyType {
+  MEDICAL
+  FIRE
+  ACCIDENT
+  SAFETY
+  DISASTER
+  OTHER
+}
+
+enum EmergencyStatus {
+  PENDING
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ResponseStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COMPLETED
+}
+
+enum NotificationType {
+  EMERGENCY_ALERT
+  VOLUNTEER_ASSIGNED
+  RESPONSE_UPDATE
+  SYSTEM
+  VERIFICATION
+}
+

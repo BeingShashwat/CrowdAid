@@ -2,18 +2,74 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
-    font-family: var(--font-inter), "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-      sans-serif;
+/* ---------- CSS Variables (light + dark) ---------- */
+:root {
+  --bg: #ffffff;
+  --fg: #111827;
+  --muted: #6b7280;
+  --border-color: #e5e7eb;
+  --card-bg: #ffffff;
+
+  /* spacing scale (used by utilities below) */
+  /* spacing variables removed: using direct spacing values instead */
+}
+
+/* Dark mode variables */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1220;
+    --fg: #e6eef8;
+    --muted: #9ca3af;
+    --border-color: rgba(255, 255, 255, 0.06);
+    --card-bg: #071025;
   }
 }
 
+/* ---------- Base Layer ---------- */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--fg);
+    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: var(--font-inter), "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      sans-serif;
+    line-height: 1.45;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--fg);
+    margin: 0 0 0.5rem 0;
+  }
+
+  small, .muted {
+    color: var(--muted);
+  }
+
+  .card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+  }
+
+  .app-container {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* ---------- Utilities Layer ---------- */
 @layer utilities {
   .animate-fade-in {
     animation: fadeIn 0.8s ease-out forwards;
@@ -24,55 +80,34 @@
     animation: slideDown 0.4s ease-out forwards;
   }
 
-  .animation-delay-200 {
-    animation-delay: 200ms;
-  }
+  .animation-delay-200 { animation-delay: 200ms; }
+  .animation-delay-400 { animation-delay: 400ms; }
+  .animation-delay-600 { animation-delay: 600ms; }
+  .animation-delay-800 { animation-delay: 800ms; }
 
-  .animation-delay-400 {
-    animation-delay: 400ms;
-  }
+  /* Border color helper */
+  .bd-default { border-color: var(--border-color); }
 
-  .animation-delay-600 {
-    animation-delay: 600ms;
-  }
-
-  .animation-delay-800 {
-    animation-delay: 800ms;
-  }
+  /* Cell size utilities: use direct rem values (previously from spacing scale) */
+  .cell-size-4 { --cell-size: 1rem; }
+  .cell-size-6 { --cell-size: 1.5rem; }
+  .cell-size-8 { --cell-size: 2rem; }
 }
 
+/* ---------- Keyframes ---------- */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-15px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-15px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 4px;
-}
-
+/* ---------- Custom Scrollbar ---------- */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
 ::-webkit-scrollbar-thumb {
   background: linear-gradient(to bottom, #cbd5e1, #94a3b8);
   border-radius: 4px;
@@ -82,102 +117,62 @@
   background: linear-gradient(to bottom, #94a3b8, #64748b);
 }
 
-/* Focus styles for accessibility */
-.focus-visible:focus {
-  @apply outline-none ring-2 ring-blue-500 ring-offset-2;
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-  .bg-white\/80,
-  .bg-white\/90,
-  .bg-white\/95 {
-    @apply bg-white;
+/* ---------- Focus Styles ---------- */
+@layer components {
+  .focus-visible:focus {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2;
   }
 }
 
-/* Reduced motion support */
+/* ---------- High Contrast Mode ---------- */
+@media (prefers-contrast: high) {
+  .bg-white\/80, .bg-white\/90, .bg-white\/95 {
+    background-color: #ffffff;
+  }
+}
+
+/* ---------- Reduced Motion ---------- */
 @media (prefers-reduced-motion: reduce) {
-  .animate-pulse,
-  .animate-bounce,
-  .animate-spin,
-  .animate-fade-in,
-  .animate-slide-down {
+  .animate-pulse, .animate-bounce, .animate-spin, .animate-fade-in, .animate-slide-down {
     animation: none !important;
     opacity: 1 !important;
   }
-
   * {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
   }
 }
 
-/* Enhanced button interactions */
-button:active {
-  transform: scale(0.98);
-}
+/* ---------- Button & Transition ---------- */
+button:active { transform: scale(0.98); }
+button, a, input, textarea, select { transition: all 0.2s ease-in-out; }
 
-/* Smooth transitions for all interactive elements */
-button,
-a,
-input,
-textarea,
-select {
-  transition: all 0.2s ease-in-out;
-}
+/* ---------- Gradients ---------- */
+.gradient-bg-primary   { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
+.gradient-bg-secondary { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+.gradient-bg-success   { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
 
-/* Custom gradient backgrounds */
-.gradient-bg-primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-}
+/* ---------- Shadows ---------- */
+.shadow-soft   { box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+.shadow-medium { box-shadow: 0 8px 30px rgba(0,0,0,0.12); }
+.shadow-strong { box-shadow: 0 15px 40px rgba(0,0,0,0.15); }
 
-.gradient-bg-secondary {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-}
-
-.gradient-bg-success {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-}
-
-/* Enhanced shadow utilities */
-.shadow-soft {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-}
-
-.shadow-medium {
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-}
-
-.shadow-strong {
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
-}
-
-/* Glass morphism effect */
+/* ---------- Glass Morphism ---------- */
 .glass {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255,255,255,0.85);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255,255,255,0.2);
 }
 
-/* India-specific styling */
+/* ---------- India Flag Gradient ---------- */
 .india-flag-gradient {
   background: linear-gradient(to right, #ff9933 33%, #ffffff 33%, #ffffff 66%, #138808 66%);
 }
 
-/* Emergency button pulse effect */
+/* ---------- Emergency Pulse ---------- */
 @keyframes emergency-pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 20px rgba(239, 68, 68, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
-  }
+  0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.7); }
+  70%  { box-shadow: 0 0 0 20px rgba(239,68,68,0); }
+  100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
 }
-
-.emergency-pulse {
-  animation: emergency-pulse 2s infinite;
-}
+.emergency-pulse { animation: emergency-pulse 2s infinite; }

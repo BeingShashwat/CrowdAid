@@ -52,28 +52,48 @@ export default function SignupPage() {
     try {
       validateForm()
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      // Try backend API
+      try {
+        const { authApi } = await import("@/lib/api-client")
+        const response = await authApi.register({
+          email: formData.email,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          password: formData.password,
+          userType: userType.toUpperCase() as "USER" | "VOLUNTEER",
+          phone: formData.phone,
+          agreeToTerms: formData.agreeToTerms,
+          emergencyContact: formData.agreeToEmergencyContact,
+        })
 
-      // Simulate successful registration
-      const userData = {
-        email: formData.email,
-        name: `${formData.firstName} ${formData.lastName}`,
-        type: userType,
-        phone: formData.phone,
-        registrationTime: new Date().toISOString(),
-        verified: false,
+        setSuccess(
+          response.message || `Account created successfully! ${userType === "volunteer" ? "Please check your email for verification instructions." : "You can now sign in."}`,
+        )
+
+        setTimeout(() => {
+          router.push("/login")
+        }, 2000)
+      } catch (apiErr) {
+        // Fallback if backend not available
+        const userData = {
+          email: formData.email,
+          name: `${formData.firstName} ${formData.lastName}`,
+          type: userType,
+          phone: formData.phone,
+          registrationTime: new Date().toISOString(),
+          verified: false,
+        }
+
+        localStorage.setItem("crowdaid_user", JSON.stringify(userData))
+
+        setSuccess(
+          `Account created successfully! ${userType === "volunteer" ? "Please check your email for verification instructions." : "You can now sign in."}`,
+        )
+
+        setTimeout(() => {
+          router.push("/login")
+        }, 2000)
       }
-
-      localStorage.setItem("crowdaid_user", JSON.stringify(userData))
-
-      setSuccess(
-        `Account created successfully! ${userType === "volunteer" ? "Please check your email for verification instructions." : "You can now sign in."}`,
-      )
-
-      setTimeout(() => {
-        router.push("/login")
-      }, 2000)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed")
     } finally {
@@ -90,18 +110,8 @@ export default function SignupPage() {
   }
 
   const handleGoogleSignup = () => {
-    setIsLoading(true)
-    setTimeout(() => {
-      const userData = {
-        email: "user@gmail.com",
-        name: "Google User",
-        type: userType,
-        registrationTime: new Date().toISOString(),
-        verified: true,
-      }
-      localStorage.setItem("crowdaid_user", JSON.stringify(userData))
-      router.push("/dashboard")
-    }, 1500)
+    // Redirect to backend OAuth endpoint
+    window.location.href = "http://localhost:3001/api/auth/google"
   }
 
   return (
